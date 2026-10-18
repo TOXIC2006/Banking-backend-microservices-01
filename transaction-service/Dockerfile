@@ -2,7 +2,7 @@
 #transaction-service/Dockerfile
 
 # Step 1: Use Java 17 as base image
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 # Step 2: Set working directory inside container
 WORKDIR /app

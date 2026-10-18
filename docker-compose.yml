@@ -59,7 +59,7 @@ services:
   # ---------- APP SERVICES ----------
 
   account-service:
-    image: YOUR_IMAGE/account-service:latest
+    image: ${DOCKERHUB_USERNAME}/account-service:${IMAGE_TAG:-latest}
     container_name: account-service
     ports:
       - "8081:8081"
@@ -76,7 +76,7 @@ services:
       - banking-network
 
   transaction-service:
-    image: YOUR_IMAGE/transaction-service:latest
+    image: ${DOCKERHUB_USERNAME}/transaction-service:${IMAGE_TAG:-latest}
     container_name: transaction-service
     ports:
       - "8082:8082"
@@ -97,7 +97,7 @@ services:
       - banking-network
 
   payment-service:
-    image: YOUR_IMAGE/payment-service:latest
+    image: ${DOCKERHUB_USERNAME}/payment-service:${IMAGE_TAG:-latest}
     container_name: payment-service
     ports:
       - "8083:8083"
@@ -116,7 +116,7 @@ services:
       - banking-network
 
   fraud-detection-service:
-    image: YOUR_IMAGE/fraud-detection-service:latest
+    image: ${DOCKERHUB_USERNAME}/fraud-detection-service:${IMAGE_TAG:-latest}
     container_name: fraud-detection-service
     ports:
       - "8084:8084"
@@ -133,7 +133,7 @@ services:
       - banking-network
 
   notification-service:
-    image: YOUR_IMAGE/notification-service:latest
+    image: ${DOCKERHUB_USERNAME}/notification-service:${IMAGE_TAG:-latest}
     container_name: notification-service
     ports:
       - "8085:8085"
@@ -146,7 +146,7 @@ services:
       - banking-network
 
   api-gateway:
-    image: YOUR_IMAGE/api-gateway:latest
+    image: ${DOCKERHUB_USERNAME}/api-gateway:${IMAGE_TAG:-latest}
     container_name: api-gateway
     ports:
       - "8080:8080"

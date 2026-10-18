@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to deploy
+        required: false
+        default: latest
+
+jobs:
+  deploy:
+    name: Deploy via SSH
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        run: |
+          mkdir -p "$HOME/.ssh"
+          echo "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          scp -o StrictHostKeyChecking=accept-new -P "$SSH_PORT" docker-compose.yml "$SSH_USER@$SSH_HOST:~/banking/docker-compose.yml"
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Pull and restart on server
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -s <<REMOTE
+          set -e
+          cd ~/banking
+          if [ ! -f .env ]; then
+            cat > .env <<ENVF
+          MYSQL_ROOT_PASSWORD=change-me-strong-password
+          RAZORPAY_KEY_ID=your_key_id
+          RAZORPAY_KEY_SECRET=your_key_secret
+          DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME
+          ENVF
+          fi
+          export IMAGE_TAG='${{ github.event.inputs.tag }}'
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker compose ps
+          REMOTE
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
