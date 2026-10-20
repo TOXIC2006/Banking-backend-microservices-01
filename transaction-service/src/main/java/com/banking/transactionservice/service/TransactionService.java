@@ -47,6 +47,19 @@ public class TransactionService {
                 request.getReceiverAccountNumber(),
                 request.getAmount());
 
+        // Validate amount is positive
+        if(request.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0){
+            throw new RuntimeException("Transfer amount must be positive");
+        }
+
+        // Validate receiver account exists before deducting from sender
+        try {
+            accountServiceClient.getAccount(request.getReceiverAccountNumber());
+        } catch (Exception e) {
+            throw new RuntimeException("Receiver account not found: "
+                    + request.getReceiverAccountNumber());
+        }
+
         // SAGA STEP 1: Deduct from sender
         accountServiceClient.deductBalance(
                 request.getSenderAccountNumber(),
@@ -89,9 +102,19 @@ public class TransactionService {
 
     public List<TransactionResponse> getTransactionHistory(String accountNumber){
 
-        return transactionRepository
-                .findBySenderAccountNumberOrderByCreatedAtDesc(accountNumber)
-                .stream()
+        List<Transaction> sent = transactionRepository
+                .findBySenderAccountNumberOrderByCreatedAtDesc(accountNumber);
+
+        List<Transaction> received = transactionRepository
+                .findByReceiverAccountNumberOrderByCreatedAtDesc(accountNumber);
+
+        // Merge and deduplicate (a tx could appear in both if sender==receiver)
+        java.util.LinkedHashMap<String, Transaction> merged = new java.util.LinkedHashMap<>();
+        for(Transaction t : sent) merged.put(t.getId(), t);
+        for(Transaction t : received) merged.put(t.getId(), t);
+
+        return merged.values().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -103,6 +126,14 @@ public class TransactionService {
                 .orElseThrow(() -> new RuntimeException(
                         "Transaction not found "+transactionID
                 ));
+
+        // Prevent OTP replay on completed/flagged transactions
+        if(transaction.getStatus() == TransactionStatus.COMPLETED
+                || transaction.getStatus() == TransactionStatus.FLAGGED){
+            log.warn("Transaction {} already {} - OTP verification skipped",
+                    transactionID, transaction.getStatus());
+            return mapToResponse(transaction);
+        }
 
         String otpKey = "verification:otp" + transactionID;
         String storedOtp = redisTemplate.opsForValue().get(otpKey);

@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [account-service, transaction-service, payment-service, fraud-detection-service, notification-service, api-gateway]
+        service: [account-service, transaction-service, payment-service, fraud-detection-service, notification-service, api-gateway, discovery-service]
     steps:
       - uses: actions/checkout@v4
 

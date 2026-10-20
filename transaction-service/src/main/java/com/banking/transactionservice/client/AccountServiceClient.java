@@ -23,4 +23,7 @@ public interface AccountServiceClient {
 
     @GetMapping("/api/v1/accounts/{accountNumber}/balance")
     BigDecimal getBalance(@PathVariable String accountNumber);
+
+    @GetMapping("/api/v1/accounts/{accountNumber}")
+    Object getAccount(@PathVariable String accountNumber);
 }

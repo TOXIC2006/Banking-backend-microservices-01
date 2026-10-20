@@ -47,6 +47,9 @@ public class Account {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal dailyTransactionLimit;
 
+    @Version
+    private Long version;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

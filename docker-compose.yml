@@ -56,6 +56,17 @@ services:
     networks:
       - banking-network
 
+  discovery-service:
+    image: ${DOCKERHUB_USERNAME}/discovery-service:${IMAGE_TAG:-latest}
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    restart: unless-stopped
+    networks:
+      - banking-network
+
   # ---------- APP SERVICES ----------
 
   account-service:
@@ -68,9 +79,11 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - mysql
       - kafka
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network
@@ -87,11 +100,13 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       ACCOUNT_SERVICE_URL: http://account-service:8081
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - mysql
       - kafka
       - redis
       - account-service
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network
@@ -108,9 +123,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-your-webhook-secret}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - mysql
       - kafka
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network
@@ -124,10 +142,12 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       ACCOUNT_SERVICE_URL: http://account-service:8081
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - kafka
       - redis
       - account-service
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network
@@ -139,8 +159,10 @@ services:
       - "8085:8085"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - kafka
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network
@@ -152,10 +174,12 @@ services:
       - "8080:8080"
     environment:
       SPRING_DATA_REDIS_HOST: redis
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
     depends_on:
       - account-service
       - transaction-service
       - payment-service
+      - discovery-service
     restart: unless-stopped
     networks:
       - banking-network

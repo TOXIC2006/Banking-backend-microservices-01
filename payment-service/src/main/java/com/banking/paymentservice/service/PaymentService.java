@@ -16,6 +16,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +35,9 @@ public class PaymentService {
 
     @Value("${razorpay.key-secret}")
     private String keySecret;
+
+    @Value("${razorpay.webhook-secret}")
+    private String webhookSecret;
 
     private static final String PAYMENT_COMPLETED_TOPIC = "payment.completed";
     private static final String PAYMENT_FAILED_TOPIC = "payment.failed";
@@ -81,8 +86,13 @@ public class PaymentService {
     }
 
 
-    public void handleWebhook(Map<String, Object> payload) {
+    public void handleWebhook(Map<String, Object> payload, String rawBody, String signatureHeader) {
         log.info("Received Razorpay webhook: {}", payload.get("event"));
+
+        if (!isSignatureValid(rawBody, signatureHeader)) {
+            log.warn("Webhook signature verification FAILED - rejecting");
+            throw new RuntimeException("Invalid webhook signature");
+        }
 
         String event = (String) payload.get("event");
 
@@ -90,6 +100,32 @@ public class PaymentService {
             handlePaymentSuccess(payload);
         } else if ("payment.failed".equals(event)) {
             handlePaymentFailure(payload);
+        }
+    }
+
+    // Razorpay signs webhooks with HMAC-SHA256 of the raw body using the webhook secret
+    private boolean isSignatureValid(String rawBody, String signatureHeader) {
+        if (signatureHeader == null || signatureHeader.isBlank()) {
+            return false;
+        }
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            javax.crypto.spec.SecretKeySpec keySpec = new javax.crypto.spec.SecretKeySpec(
+                    webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(keySpec);
+            byte[] digest = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+
+            return MessageDigest.isEqual(
+                    hex.toString().getBytes(StandardCharsets.UTF_8),
+                    signatureHeader.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.error("Signature verification error: {}", e.getMessage());
+            return false;
         }
     }
 

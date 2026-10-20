@@ -99,6 +99,11 @@ public class AccountService {
     @Transactional
     public void creditBalance(String accountNumber, BigDecimal amount) {
         log.info("Crediting {} to account: {}", amount, accountNumber);
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Credit amount must be positive");
+        }
+
         Account account = findByAccountNumber(accountNumber);
         account.setBalance(account.getBalance().add(amount));
         accountRepository.save(account);

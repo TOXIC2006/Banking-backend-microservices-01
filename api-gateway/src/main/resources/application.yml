@@ -7,11 +7,26 @@ spring:
       port: 6379
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       routes:
+
+        # Block internal money-movement endpoints from external callers.
+        # They are only for service-to-service SAGA calls inside the network.
+        - id: block-internal-account-ops
+          uri: no://op
+          predicates:
+            - Path=/api/v1/accounts/*/deduct,/api/v1/accounts/*/credit
+          filters:
+            - name: SetStatus
+              args:
+                status: FORBIDDEN
 
         # Account Service Routes
         - id: account-service
-          uri: http://account-service:8081
+          uri: lb://account-service
           predicates:
             - Path=/api/v1/accounts/**
           filters:
@@ -22,7 +37,7 @@ spring:
 
         # Transaction Service Routes
         - id: transaction-service
-          uri: http://transaction-service:8082
+          uri: lb://transaction-service
           predicates:
             - Path=/api/v1/transactions/**
           filters:
@@ -33,7 +48,7 @@ spring:
 
         # Payment Service Routes
         - id: payment-service
-          uri: http://payment-service:8083
+          uri: lb://payment-service
           predicates:
             - Path=/api/v1/payments/**
           filters:
@@ -49,3 +64,12 @@ management:
     web:
       exposure:
         include: health,info,gateway
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true

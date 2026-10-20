@@ -31,11 +31,12 @@ public class PaymentController {
     }
 
     // Razorpay webhook endpoint
-    @PostMapping("/webhook")
+    @PostMapping(value = "/webhook", consumes = "application/json")
     public ResponseEntity<String> handleWebhook(
-            @RequestBody Map<String, Object> payload) {
+            @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature,
+            @RequestBody String rawBody) {
         log.info("Webhook received from Razorpay");
-        paymentService.handleWebhook(payload);
+        paymentService.handleWebhook(new org.json.JSONObject(rawBody).toMap(), rawBody, signature);
         return ResponseEntity.ok("Webhook processed");
     }
 }
