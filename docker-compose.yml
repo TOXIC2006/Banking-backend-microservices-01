@@ -167,6 +167,25 @@ services:
     networks:
       - banking-network
 
+  offline-upi-service:
+    image: ${DOCKERHUB_USERNAME}/offline-upi-service:${IMAGE_TAG:-latest}
+    container_name: offline-upi-service
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/offline_upi_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      - mysql
+      - kafka
+      - discovery-service
+    restart: unless-stopped
+    networks:
+      - banking-network
+
   api-gateway:
     image: ${DOCKERHUB_USERNAME}/api-gateway:${IMAGE_TAG:-latest}
     container_name: api-gateway
@@ -179,6 +198,7 @@ services:
       - account-service
       - transaction-service
       - payment-service
+      - offline-upi-service
       - discovery-service
     restart: unless-stopped
     networks:
